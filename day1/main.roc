@@ -15,4 +15,21 @@ main =
 
 run =
     input <- Task.await (File.readUtf8 (Path.fromStr "./day1/input"))
-    Stdout.line input
+
+    elveCalories =
+        Str.split input "\n\n"
+        |> List.map (\str -> parseElf str |> List.sum)
+
+    when List.max elveCalories is
+      Ok max -> Stdout.line (Num.toStr max)
+      Err _ -> crash "Input did not contain any elves"
+
+parseElf = \str ->
+    Str.split str "\n"
+    |> List.keepIf (\x -> x != "")
+    |> List.map parseOrCrash
+
+parseOrCrash = \str ->
+    when Str.toNat str is
+        Ok n -> n
+        Err _ -> crash "Cannot parse \(str) as a number"
