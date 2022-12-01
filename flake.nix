@@ -10,7 +10,10 @@
     flake-utils.lib.eachDefaultSystem (system:
       let pkgs = import nixpkgs { inherit system; };
       in {
-        devShell =
-          pkgs.mkShell { buildInputs = [ roc.packages."${system}".default ]; };
+        devShell = (pkgs.buildFHSUserEnv {
+          name = "roc-in-fhs-userenv";
+          targetPkgs = _: [ roc.packages."${system}".default ];
+          runScript = "fish";
+        }).env;
       });
 }
