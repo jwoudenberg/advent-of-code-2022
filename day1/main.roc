@@ -16,13 +16,16 @@ main =
 run =
     input <- Task.await (File.readUtf8 (Path.fromStr "./day1/input"))
 
-    elveCalories =
+    elfCalories =
         Str.split input "\n\n"
         |> List.map (\str -> parseElf str |> List.sum)
 
-    when List.max elveCalories is
-      Ok max -> Stdout.line (Num.toStr max)
-      Err _ -> crash "Input did not contain any elves"
+    caloriesByMaxThreeElves =
+        List.sortDesc elfCalories
+        |> List.takeFirst 3
+        |> List.sum
+
+    Stdout.line (Num.toStr caloriesByMaxThreeElves)
 
 parseElf = \str ->
     Str.split str "\n"
