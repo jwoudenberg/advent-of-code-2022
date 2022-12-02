@@ -9,7 +9,7 @@ main =
         Ok _ -> Task.succeed {}
         Err _ -> crash "Unexpected error"
 
-Game : { opponent : [A, B, C], self : [X, Y, Z] }
+Guide : { opponent : [A, B, C], play : [X, Y, Z] }
 
 run =
     input <-
@@ -17,44 +17,44 @@ run =
         |> Task.mapFail FileError
         |> Task.await
 
-    games <-
+    guides <-
         Parser.run input parser
         |> Result.mapErr ParseError
         |> Task.fromResult
         |> Task.await
 
-    totalScore = List.map games score |> List.sum
+    totalScore = List.map guides score |> List.sum
 
     Stdout.line (Num.toStr totalScore)
 
-score : Game -> Nat
-score = \game ->
+score : Guide -> Nat
+score = \guide ->
     pointsFromOutcome =
-        when outcome game is
+        when fromPlay guide.play is
             Win -> 6
             Draw -> 3
-            Loss -> 0
+            Lose -> 0
 
     pointsFromMove =
-        when fromSelf game.self is
+        when selfMove guide is
             Rock -> 1
             Paper -> 2
             Scissors -> 3
 
     pointsFromOutcome + pointsFromMove
 
-outcome : Game -> [Win, Draw, Loss]
-outcome = \game ->
-    when { opponent: fromOpponent game.opponent, self: fromSelf game.self } is
-        { opponent: Rock, self: Rock } -> Draw
-        { opponent: Rock, self: Paper } -> Win
-        { opponent: Rock, self: Scissors } -> Loss
-        { opponent: Paper, self: Rock } -> Loss
-        { opponent: Paper, self: Paper } -> Draw
-        { opponent: Paper, self: Scissors } -> Win
-        { opponent: Scissors, self: Rock } -> Win
-        { opponent: Scissors, self: Paper } -> Loss
-        { opponent: Scissors, self: Scissors } -> Draw
+selfMove : Guide -> [Rock, Paper, Scissors]
+selfMove = \guide ->
+    when { opponent: fromOpponent guide.opponent, intent: fromPlay guide.play } is
+        { opponent: Rock, intent: Lose } -> Scissors
+        { opponent: Rock, intent: Draw } -> Rock
+        { opponent: Rock, intent: Win } -> Paper
+        { opponent: Paper, intent: Lose } -> Rock
+        { opponent: Paper, intent: Draw } -> Paper
+        { opponent: Paper, intent: Win } -> Scissors
+        { opponent: Scissors, intent: Lose } -> Paper
+        { opponent: Scissors, intent: Draw } -> Scissors
+        { opponent: Scissors, intent: Win } -> Rock
 
 fromOpponent : [A, B, C] -> [Rock, Paper, Scissors]
 fromOpponent = \move ->
@@ -63,14 +63,14 @@ fromOpponent = \move ->
         B -> Paper
         C -> Scissors
 
-fromSelf : [X, Y, Z] -> [Rock, Paper, Scissors]
-fromSelf = \move ->
-    when move is
-        X -> Rock
-        Y -> Paper
-        Z -> Scissors
+fromPlay : [X, Y, Z] -> [Lose, Draw, Win]
+fromPlay = \play ->
+    when play is
+        X -> Lose
+        Y -> Draw
+        Z -> Win
 
-parser : Parser.Parser (List Game)
+parser : Parser.Parser (List Guide)
 parser =
     opponentParser =
         Parser.any [
@@ -79,7 +79,7 @@ parser =
             Parser.str "C" |> Parser.map (\_ -> C),
         ]
 
-    selfParser =
+    playParser =
         Parser.any [
             Parser.str "X" |> Parser.map (\_ -> X),
             Parser.str "Y" |> Parser.map (\_ -> Y),
@@ -89,8 +89,8 @@ parser =
     gameParser =
         opponent <- Parser.with opponentParser
         _ <- Parser.with (Parser.str " ")
-        self <- Parser.with selfParser
+        play <- Parser.with playParser
         _ <- Parser.with (Parser.str "\n")
-        Parser.success { opponent, self }
+        Parser.success { opponent, play }
 
     Parser.many gameParser
