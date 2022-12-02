@@ -1,5 +1,5 @@
 interface Parser
-    exposes [Parser, ParseError, run, str, any, map, with, many]
+    exposes [Parser, ParseError, run, str, any, map, with, many, success]
     imports []
 
 Parser a := List U8 -> Result { result : a, remaining : List U8 } ParseError
@@ -19,7 +19,8 @@ run = \bytes, @Parser go ->
     then
         Ok result
     else
-        Err (BytesRemainAfterParsing remaining)
+        # Err (BytesRemainAfterParsing remaining)
+        Ok result
 
 str : Str -> Parser Str
 str = \expected ->
@@ -69,13 +70,16 @@ with = \@Parser go, next ->
 many : Parser a -> Parser (List a)
 many = \parser ->
     first <- with parser
-    (@Parser go) = parser
-    helper = \acc, bytes ->
-        when go bytes is
-            Ok { result, remaining } ->
-                helper (List.append acc result) remaining
+    @Parser (\bytes -> manyHelper parser [first] bytes)
 
-            Err _ ->
-                Ok { remaining: bytes, result: acc }
+manyHelper = \parser, acc, bytes ->
+    @Parser go = parser
+    when go bytes is
+        Ok { result, remaining } ->
+            manyHelper parser (List.append acc result) remaining
 
-    @Parser (\bytes -> helper [first] bytes)
+        Err _ ->
+            Ok { remaining: bytes, result: acc }
+
+success : a -> Parser a
+success = \result -> @Parser (\remaining -> Ok { remaining, result })
