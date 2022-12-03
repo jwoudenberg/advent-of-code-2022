@@ -18,17 +18,32 @@ run =
 
     totalPriority =
         Str.split input "\n"
-            |> List.map rucksackPriority
+            |> groupsOf 3
+            |> List.map groupPriority
             |> List.sum
 
     Stdout.line (Num.toStr totalPriority)
 
-rucksackPriority : Str -> Nat
-rucksackPriority = \rucksack ->
-  items = Str.toUtf8 rucksack
-  compartmentSize = List.len items // 2
-  { before, others } = List.split items compartmentSize
-  commonItems = Set.intersection (Set.fromList before) (Set.fromList others)
+groupsOf : List a, Nat -> List (List a)
+groupsOf = \originalList, size ->
+    helper = \list,  acc ->
+        if List.isEmpty list then
+            acc
+        else
+            { before, others } = List.split list size
+            helper others (List.append acc before)
+    helper originalList []
+
+allItems : Set (Int Unsigned8)
+allItems =
+    Str.toUtf8 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        |> Set.fromList
+
+groupPriority : List Str -> Nat
+groupPriority = \group ->
+  commonItems = List.walk group allItems (\common, rucksack ->
+    Set.intersection common (Set.fromList (Str.toUtf8 rucksack))
+  )
   Set.toList commonItems
     |> List.map itemPriority
     |> List.sum
