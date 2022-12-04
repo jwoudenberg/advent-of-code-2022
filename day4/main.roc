@@ -21,22 +21,19 @@ run =
         |> Task.fromResult
         |> Task.await
 
-    fullyOverlappingWorkAssignments =
-        List.keepIf workAssignments fullyOverlaps
+    overlappingWorkAssignments =
+        List.keepIf workAssignments overlaps
 
-    Stdout.line (Num.toStr (List.len fullyOverlappingWorkAssignments))
+    Stdout.line (Num.toStr (List.len overlappingWorkAssignments))
 
 WorkAssignment : {
     elf1 : { start : Nat, end : Nat },
     elf2 : { start : Nat, end : Nat },
 }
 
-fullyOverlaps : WorkAssignment -> Bool
-fullyOverlaps = \{ elf1, elf2 } ->
-    contains = \inner, outer ->
-        inner.start >= outer.start && inner.end <= outer.end
-
-    contains elf1 elf2 || contains elf2 elf1
+overlaps : WorkAssignment -> Bool
+overlaps = \{ elf1, elf2 } ->
+    !((elf1.start > elf2.end) || (elf1.end < elf2.start))
 
 parser : Parser.Parser (List WorkAssignment)
 parser =
